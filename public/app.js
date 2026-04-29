@@ -135,7 +135,7 @@ async function renderTicket() {
 
         ${suggestedReplyHTML(t)}
 
-        <h3 style="font-size:.78rem;color:#f5c842;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">AI actions · workshop TODOs</h3>
+        <h3 style="font-size:.72rem;color:#005EB8;letter-spacing:1.5px;text-transform:uppercase;font-weight:800;margin-bottom:12px">AI Actions</h3>
 
         <div class="todo-grid">
           <button class="todo-btn" data-action="triage">
