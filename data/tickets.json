@@ -1,5 +1,17 @@
 [
   {
+    "id": "TKT-941483",
+    "subject": "FW: Coretek | Elemica - PM Sync - Pilot Proof of Value & AI Factory",
+    "body": "Azure access request for Coretek AI Factory POV team (5 users).\n\nBryan Giczewski (Coretek PM) requested Azure Contributor access at the Tenant/Subscription level for the following project team resources:\n- Brian Steele (Technical Oversight, Enterprise Architect AI & Data)\n- Tony Nichols (AI Architect)\n- Harish SM (AI Engineer)\n- Dustin Lussier (DevOps Consultant)\n- Bryan Giczewski (Project Management)\n\nAdditionally, Microsoft Fabric Admin access (Entra ID role) was requested for at least one Coretek team member to set up a greenfield Fabric workspace for the POV.\n\nResolution:\nVenkata Kalisetty created Elemica-hosted accounts for all five users (Welcome@04272026!). Chad Hughes created Entra security group [EXT-Coretek-AIFactory], added all five as members, and assigned the Contributor role at Azure Subscription 1 scope. Access for all five can be revoked at engagement end by removing the group or its members.\n\nNote: Salesforce environment access and Microsoft Fabric workspace admin are outside Azure RBAC and must be coordinated separately.",
+    "category": "access-request",
+    "severity": "medium",
+    "reporter": "Dave Ivins",
+    "status": "replied",
+    "created": "2026-04-29T13:05:41.483Z",
+    "sentReply": "Hi Dave,\n\nThank you for your request. Here is an update on ticket TKT-941483:\n\nVenkata Kalisetty created Elemica-hosted accounts for all five users (Welcome@04272026!). Chad Hughes created Entra security group [EXT-Coretek-AIFactory], added all five as members, and assigned the Contributor role at Azure Subscription 1 scope. Access for all five can be revoked at engagement end by removing the group or its members.\n\nNote: Salesforce environment access and Microsoft Fabric workspace admin are outside Azure RBAC and must be coordinated separately.\n\nPlease let us know if you have any questions or need further assistance.\n\nBest regards,\nElemica IT Support",
+    "repliedAt": "2026-04-29T14:50:55.547Z"
+  },
+  {
     "id": "EDI-2147",
     "subject": "947 X12 mapping — IDoc to 947 path drops IT1*ADJ for negative quantities",
     "body": "Customer rolled their 947 X12 mapping live last week. Customer support flagged that downstream WMS is rejecting messages with reason code BD (damaged) because our IDoc-to-947 path is dropping the IT1*ADJ segment when source IDoc has MENGE < 0. Reproduces every time. Affects 3-5 messages/day for this customer. Need a fix that preserves IT1*ADJ for negative qty without breaking the positive path. Customer wants ETA by Thursday.",

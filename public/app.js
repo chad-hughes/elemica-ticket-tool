@@ -7,6 +7,60 @@ const fmtDate = (iso) => {
 const escapeHtml = (s = "") =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+const sectionHTML = (label, text) =>
+  `<div class="ticket-section">
+    <div class="section-label">${label}</div>
+    <div class="ticket-body">${escapeHtml(text.trim())}</div>
+  </div>`;
+
+const bodyHTML = (body) => {
+  const resMatch = body.match(/\nResolution:\n/i);
+  const noteMatch = body.match(/\nNote:\n/i);
+  if (!resMatch && !noteMatch) return sectionHTML("Description", body);
+
+  const splitAt = (str, match) => match ? [str.slice(0, match.index), str.slice(match.index + match[0].length)] : [str, null];
+
+  const [desc, rest] = splitAt(body, resMatch);
+  if (!rest) return sectionHTML("Description", desc) + sectionHTML("Note", body.slice(noteMatch.index + noteMatch[0].length));
+
+  const [resolution, note] = splitAt(rest, rest.match(/\nNote:\n/i));
+  return sectionHTML("Description", desc)
+    + sectionHTML("Resolution", resolution)
+    + (note ? sectionHTML("Note", note) : "");
+};
+
+const reporterEmail = (reporter = "") => {
+  const parts = reporter.trim().toLowerCase().split(/\s+/);
+  if (parts.length < 2) return reporter ? `${parts[0]}@elemica.com` : "—";
+  return `${parts[0]}.${parts[parts.length - 1]}@elemica.com`;
+};
+
+const extractResolution = (body) => {
+  const resMatch = body.match(/\nResolution:\n/i);
+  if (!resMatch) return null;
+  const after = body.slice(resMatch.index + resMatch[0].length);
+  const noteMatch = after.match(/\nNote:\n/i);
+  return noteMatch ? after.slice(0, noteMatch.index).trim() : after.trim();
+};
+
+const suggestedReplyHTML = (ticket) => {
+  const resolution = extractResolution(ticket.body);
+  if (!resolution) return "";
+  const firstName = (ticket.reporter || "").split(/[\s,]+/)[0] || "there";
+  const reply = `Hi ${firstName},\n\nThank you for your request. Here is an update on ticket ${ticket.id}:\n\n${resolution}\n\nPlease let us know if you have any questions or need further assistance.\n\nBest regards,\nElemica IT Support`;
+  return `
+    <div class="ticket-section">
+      <div class="section-label">Suggested Reply</div>
+      <div class="reply-panel">
+        <pre class="reply-text">${escapeHtml(reply)}</pre>
+        <div class="reply-actions">
+          <button class="copy-btn" onclick="navigator.clipboard.writeText(this.closest('.reply-panel').querySelector('.reply-text').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})">Copy</button>
+          <button class="send-btn" data-ticket-id="${ticket.id}">Send Reply</button>
+        </div>
+      </div>
+    </div>`;
+};
+
 // ─── /  inbox ────────────────────────────────────────────────────────────────
 async function renderInbox() {
   const list = document.getElementById("list");
@@ -63,7 +117,7 @@ async function renderTicket() {
       <div>
         <div class="ticket-header">
           <div class="id">${t.id}</div>
-          <h1>${escapeHtml(t.subject)}</h1>
+          <h1 class="${t.severity === 'urgent' ? 'urgent-title' : ''}">${escapeHtml(t.subject)}</h1>
           <div class="meta">
             <span class="tag cat-${t.category}">${t.category.replace("-", " ")}</span>
             <span class="sev sev-${t.severity}"><span class="sev-dot"></span>${t.severity}</span>
@@ -72,9 +126,16 @@ async function renderTicket() {
           </div>
         </div>
 
-        <div class="ticket-body">${escapeHtml(t.body)}</div>
+        ${bodyHTML(t.body)}
 
-        <h3 style="font-size:.78rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">AI actions · workshop TODOs</h3>
+        <div class="ticket-section" id="walkthrough-section">
+          <div class="section-label">Technical Walkthrough</div>
+          <div class="walkthrough-loading">Generating walkthrough…</div>
+        </div>
+
+        ${suggestedReplyHTML(t)}
+
+        <h3 style="font-size:.78rem;color:#f5c842;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">AI actions · workshop TODOs</h3>
 
         <div class="todo-grid">
           <button class="todo-btn" data-action="triage">
@@ -104,19 +165,28 @@ async function renderTicket() {
 
       <aside>
         <div class="side-card">
+          <h3>Sun Temperature</h3>
+          <div class="row"><span class="k">Surface</span><span class="v">5,778 K</span></div>
+          <div class="row"><span class="k"></span><span class="v">5,505 °C</span></div>
+          <div class="row"><span class="k"></span><span class="v">9,941 °F</span></div>
+          <div class="row"><span class="k">Core</span><span class="v">15,000,000 K</span></div>
+          <div class="row"><span class="k">Corona</span><span class="v">1,000,000–3M K</span></div>
+        </div>
+        <div class="side-card">
+          <h3>Email Address</h3>
+          <div class="row"><span class="k">reporter</span><span class="v">${reporterEmail(t.reporter)}</span></div>
+        </div>
+        <div class="side-card" id="similar-card">
+          <h3>Similar Tickets</h3>
+          <div style="color:var(--muted);font-size:.82rem;font-style:italic">Loading…</div>
+        </div>
+        <div class="side-card">
           <h3>Ticket meta</h3>
           <div class="row"><span class="k">id</span><span class="v">${t.id}</span></div>
           <div class="row"><span class="k">status</span><span class="v">${t.status || "open"}</span></div>
           <div class="row"><span class="k">created</span><span class="v">${fmtDate(t.created)}</span></div>
           <div class="row"><span class="k">category</span><span class="v">${t.category}</span></div>
           <div class="row"><span class="k">severity</span><span class="v">${t.severity}</span></div>
-        </div>
-        <div class="side-card">
-          <h3>Workshop hint</h3>
-          <p style="font-size:.84rem;color:var(--text);line-height:1.65">
-            Open Claude Code in your terminal and run:<br><br>
-            <code style="background:#0a0a12;padding:8px 10px;border-radius:6px;display:block;font-size:.75rem;color:var(--accent);font-family:'IBM Plex Mono',monospace">claude "open lib/triage.js and wire it up to call Anthropic's API. use the ticket as input and return the JSON shape from the comment."</code>
-          </p>
         </div>
       </aside>
     </div>
@@ -125,6 +195,72 @@ async function renderTicket() {
   document.querySelectorAll(".todo-btn").forEach((btn) => {
     btn.addEventListener("click", () => runAction(btn, t.id, btn.dataset.action));
   });
+
+  fetch(`/api/tickets/${encodeURIComponent(t.id)}/similar`, { method: "POST" })
+    .then((r) => r.json())
+    .then((data) => {
+      const card = document.getElementById("similar-card");
+      if (!card) return;
+      const matches = data.matches || [];
+      card.innerHTML = `<h3>Similar Tickets</h3>` + (matches.length
+        ? matches.map((m) => `
+            <div class="row" style="flex-direction:column;align-items:flex-start;gap:2px;padding:8px 0">
+              <a href="/ticket.html?id=${encodeURIComponent(m.id)}" class="sim-id">${escapeHtml(m.id)}</a>
+              <span class="sim-reason">${escapeHtml(m.reason)}</span>
+            </div>`).join("")
+        : `<div style="color:var(--muted);font-size:.82rem">No similar tickets found.</div>`);
+    })
+    .catch(() => { document.getElementById("similar-card")?.remove(); });
+
+  fetch(`/api/tickets/${encodeURIComponent(t.id)}/walkthrough`, { method: "POST" })
+    .then((r) => r.json())
+    .then((data) => {
+      const section = document.getElementById("walkthrough-section");
+      if (!section) return;
+      if (!data.steps?.length) { section.remove(); return; }
+      section.innerHTML = `
+        <div class="section-label">Technical Walkthrough</div>
+        <div class="walkthrough-steps">
+          ${data.steps.map((s) => `
+            <div class="wt-step">
+              <div class="wt-num">${s.step}</div>
+              <div class="wt-body">
+                <div class="wt-action">${escapeHtml(s.action)}</div>
+                <div class="wt-detail">${escapeHtml(s.detail)}</div>
+                <div class="wt-tip"><span class="wt-tip-label">Coaching tip</span>${escapeHtml(s.coaching_tip)}</div>
+              </div>
+            </div>
+          `).join("")}
+        </div>`;
+    })
+    .catch(() => { document.getElementById("walkthrough-section")?.remove(); });
+
+  const sendBtn = document.querySelector(".send-btn");
+  if (sendBtn) {
+    sendBtn.addEventListener("click", async () => {
+      const replyText = sendBtn.closest(".reply-panel").querySelector(".reply-text").textContent;
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending…";
+      try {
+        const res = await fetch(`/api/tickets/${encodeURIComponent(t.id)}/send-reply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reply: replyText }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          sendBtn.textContent = "Sent!";
+          sendBtn.classList.add("sent");
+        } else {
+          sendBtn.textContent = "Error";
+          sendBtn.disabled = false;
+        }
+      } catch {
+        sendBtn.textContent = "Error";
+        sendBtn.disabled = false;
+      }
+    });
+  }
 }
 
 async function runAction(btn, id, action) {
